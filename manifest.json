@@ -1,23 +1,25 @@
 {
-	"manifest_version": 2,
-	"name": "handler",
-	"description": "手势处理",
+	"manifest_version": 3,
+	"name": "Web台前调度",
+	"description": "Web台前调度",
 	"version": "0.0.1",
 	"icons": {
 		"64": "icons/icon.png"
 	},
 	"permissions": [
-		"activeTab",
+		"tabs",
+		"activeTab"
+	],
+	"host_permissions": [
 		"<all_urls>"
 	],
-	"content_scripts": [
-		{
-			"matches": [
-				"<all_urls>"
-			],
-			"js": [
-				"content_script.js"
-			]
+	"action": {
+		"default_icon": {
+			"64": "icons/icon.png"
 		}
-	]
+	},
+	"background": {
+		"page":"background-page.html"
+	}
 }
+
