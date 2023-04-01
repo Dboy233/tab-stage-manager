@@ -1,18 +1,15 @@
 // noinspection JSUnresolvedVariable,JSDeprecatedSymbols
 
+import {tabReview_firefox} from "./background-firefox.js";
+import {tabReview_chrome} from "./background-chrome.js";
 
-import './background-firefox.js';
+let tabReview = tabReview_firefox;
+let browser;
 
-// console.log("===="+tabReviewMap)
-
-
-if (typeof browser === "undefined"){
-     var browser = chrome;
+if (typeof browser === "undefined") {
+    browser = chrome;
+    tabReview = tabReview_chrome;
 }
-
-browser. aaprent()
-
-// let name_space = browser;
 
 let windowMap = new Map();
 
@@ -70,6 +67,7 @@ function onTabRemoved(tabId, removeInfo) {
 function onTabMoved(tabId, moveInfo) {
     let fromIndex = moveInfo.fromIndex;
     let toIndex = moveInfo.toIndex;
+
     // console.log(`Tab ${tabId} moved from ${fromIndex} to ${toIndex}`);
 
     function remove(tab) {
@@ -149,7 +147,6 @@ browser.tabs.onDetached.addListener(onTabDetached)
 browser.tabs.onActivated.addListener(onTabActivated)
 
 
-
 browser.runtime.onInstalled.addListener(() => {
     browser.tabs.query({}).then(tabs => {
         for (let mTab of tabs) {
@@ -159,10 +156,9 @@ browser.runtime.onInstalled.addListener(() => {
 });
 
 
+browser.action.onClicked.addListener(() => {
+    console.log(tabReview_firefox)
 
-
-browser.action.onClicked.addListener( () => {
-    console.log(tabReviewMap)
     function onCaptured(imageUri) {
         // formatImg(imageUri,600);
     }
@@ -176,25 +172,25 @@ browser.action.onClicked.addListener( () => {
 });
 
 //可能不用
-function formatImg(base64,reWidth){
+function formatImg(base64, reWidth) {
     console.log("格式化图片")
     // 创建一个Image对象
     var img = new Image();
 
-// 设置图片的src属性为base64格式的字符串
+    // 设置图片的src属性为base64格式的字符串
     img.src = base64;
 
-// 等待图片加载完成后执行操作
-    img.onload = function() {
+    // 等待图片加载完成后执行操作
+    img.onload = function () {
         // 创建一个Canvas元素
         var canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
-        console.log("img width "+ width)
-        console.log("img height "+ height)
+        console.log("img width " + width)
+        console.log("img height " + height)
         // 设置Canvas的宽高
         canvas.width = reWidth;
-        canvas.height = (height/width)*reWidth;
+        canvas.height = (height / width) * reWidth;
 
         // canvas.width = width;
         // canvas.height = height;
@@ -203,7 +199,7 @@ function formatImg(base64,reWidth){
         var ctx = canvas.getContext('2d');
 
         // 绘制图片到Canvas上
-        ctx.drawImage(img, 0, 0, canvas.width,canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
         // 将Canvas转化为base64格式的图片
         var resizedImg = canvas.toDataURL();
@@ -212,4 +208,12 @@ function formatImg(base64,reWidth){
 
 }
 
+browser.permissions.onAdded.addListener(permissions=>{
+    console.log(`add API permissions: ${permissions.permissions}`);
+    console.log(`add host permissions: ${permissions.origins}`);
+})
 
+browser.permissions.onRemoved.addListener(permissions=>{
+    console.log(`Removed API permissions: ${permissions.permissions}`);
+    console.log(`Removed host permissions: ${permissions.origins}`);
+})

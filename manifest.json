@@ -1,25 +1,36 @@
 {
-	"manifest_version": 3,
-	"name": "Web台前调度",
-	"description": "Web台前调度",
-	"version": "0.0.1",
-	"icons": {
-		"64": "icons/icon.png"
-	},
-	"permissions": [
-		"tabs",
-		"activeTab"
-	],
-	"host_permissions": [
-		"<all_urls>"
-	],
-	"action": {
-		"default_icon": {
-			"64": "icons/icon.png"
-		}
-	},
-	"background": {
-		"page":"background-page.html"
-	}
+  "manifest_version": 3,
+  "name": "Web台前调度",
+  "description": "Web台前调度",
+  "version": "0.0.1",
+  "icons": {
+    "64": "icons/icon.png"
+  },
+  "permissions": [
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_icon": {
+      "64": "icons/icon.png"
+    }
+  },
+  "background": {
+    "page": "background-page.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "popup/popup_html.js",
+        "popup/popup.js"
+      ]
+    }
+  ]
 }
 
