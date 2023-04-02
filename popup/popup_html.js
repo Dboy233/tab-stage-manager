@@ -3,55 +3,132 @@ console.log("popup_html")
 const style = document.createElement('style');
 
 style.innerHTML = `
-    #popup_root_view {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0);
-        overflow-y: auto;
-        /*这两个属性要动态添加*/
-        visibility: hidden;
-        transition: visibility 0.3s ease-in-out, background-color 0.3s ease-in-out;
-        z-index: 9999;
-    }
+   #popup_root_view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0);
+            overflow-y: scroll;
+            z-index: 9999;
+        }
 
-    #popup_left_drawer {
-        display: flex;
-        width: 500px;
-        height: auto;
-        transform: translate(-500px, 0px);
-        transition: transform 0.3s ease-in-out;
-        flex-direction: column;
-        align-items: center;
-        backdrop-filter: blur(10px);
-    }
+        #popup_left_drawer {
+            display: flex;
+            width: min-content;
+            height: auto;
+            flex-direction: column;
+            padding-left: 16px;
+            align-items: start;
+        }
 
-    #popup_left_drawer.show {
-        transform: translate(0px, 0px);
-    }
+        .popup_root_show_class {
+            animation: popup_root_show_keyframe 0.3s forwards;
+        }
 
-    #popup_root_view.show {
-        background-color: rgba(0, 0, 0, 0.1);
-        visibility: visible;
-    }
+        .popup_root_hide_class {
+            animation: popup_root_hide_keyframe 0.3s forwards;
+        }
 
-    .page_info_card {
-        height: 50px;
-        width: 400px;
-        flex-shrink: 0;
-        padding: 10px;
-        background-color: white;
-        margin-bottom: 10px;
-        /*transform: scale(0.8);*/
-        transition: width 0.2s ease-in-out, height 0.2s ease-in-out;
-    }
+        .popup_drawer_show_class {
+            animation: popup_drawer_show_keyframes 0.3s forwards;
+        }
 
-    .page_info_card.choice {
-        height: 100px;
-        width: 500px;
-    }
+        .popup_drawer_hide_class {
+            animation: popup_drawer_hide_keyframes 0.3s forwards;
+        }
+
+        @keyframes popup_root_show_keyframe {
+            from {
+                background-color: rgba(0, 0, 0, 0);
+            }
+            to {
+                background-color: rgba(0, 0, 0, 0.1);
+            }
+        }
+
+        @keyframes popup_root_hide_keyframe {
+            from {
+                background-color: rgba(0, 0, 0, 0.1);
+            }
+            to {
+                background-color: rgba(0, 0, 0, 0);
+            }
+        }
+
+        @keyframes popup_drawer_show_keyframes {
+            from {
+                transform: translate(-548px, 0px);
+            }
+            to {
+                transform: translate(0px, 0px);
+            }
+        }
+
+        @keyframes popup_drawer_hide_keyframes {
+            from {
+                transform: translate(0px, 0px);
+            }
+            to {
+                transform: translate(-548px, 0px);
+            }
+        }
+
+
+        .page_info_card {
+            width: 444px;
+            height: auto;
+            max-height: 300px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
+
+            overflow: hidden;
+            margin-bottom: 16px;
+
+            transition: width 0.2s ease-in-out, height 0.2s ease-in-out;
+        }
+
+
+        .page_info_card_desc_container {
+            display: flex;
+            flex-direction: row;
+            gap: 0;
+        }
+
+        .page_info_card_img {
+            display: none;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .page_info_card_desc {
+            flex: 1;
+            width: auto;
+            padding: 16px;
+            font-size: 18px;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 9999;
+            user-select: none;
+        }
+
+        .page_info_card_button {
+            width: 50px;
+            height: 60px;
+            color: white;
+            text-align: center;
+            font-size: 28px;
+            line-height: 60px;
+            cursor: pointer;
+            user-select: none;
+        }
 `;
 
 document.head.appendChild(style);

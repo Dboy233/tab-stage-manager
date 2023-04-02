@@ -1,3 +1,4 @@
+<!--这个是用来测试的-->
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -17,17 +18,17 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0);
-            overflow-y: auto;
+            overflow-y: scroll;
             z-index: 9999;
         }
 
         #popup_left_drawer {
             display: flex;
-            width: 500px;
+            width: min-content;
             height: auto;
             flex-direction: column;
-            align-items: center;
-            backdrop-filter: blur(10px);
+            padding-left: 16px;
+            align-items: start;
         }
 
         .popup_root_show_class {
@@ -66,7 +67,7 @@
 
         @keyframes popup_drawer_show_keyframes {
             from {
-                transform: translate(-500px, 0px);
+                transform: translate(-548px, 0px);
             }
             to {
                 transform: translate(0px, 0px);
@@ -78,27 +79,64 @@
                 transform: translate(0px, 0px);
             }
             to {
-                transform: translate(-500px, 0px);
+                transform: translate(-548px, 0px);
             }
         }
 
 
         .page_info_card {
-            height: 50px;
-            width: 400px;
-            flex-shrink: 0;
-            padding: 10px;
-            background-color: white;
-            margin-bottom: 10px;
-            /*transform: scale(0.8);*/
+            width: 444px;
+            height: auto;
+            max-height: 300px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
+
+            overflow: hidden;
+            margin-bottom: 16px;
+
             transition: width 0.2s ease-in-out, height 0.2s ease-in-out;
         }
 
-        .page_info_card.choice {
-            height: 100px;
-            width: 500px;
+
+        .page_info_card_desc_container {
+            display: flex;
+            flex-direction: row;
+            gap: 0;
         }
 
+        .page_info_card_img {
+            display: none;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .page_info_card_desc {
+            flex: 1;
+            width: auto;
+            padding: 16px;
+            font-size: 18px;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 9999;
+            user-select: none;
+        }
+
+        .page_info_card_button {
+            width: 50px;
+            height: 60px;
+            color: white;
+            text-align: center;
+            font-size: 28px;
+            line-height: 60px;
+            cursor: pointer;
+            user-select: none;
+        }
 
     </style>
 </head>
@@ -122,8 +160,11 @@
     let id_label_card = "page_info_card";
     let class_label_card = `.${id_label_card}`;
 
-    //距离屏幕中心最近的Box
-    let closestBox = null;
+    /**
+     * 是否展示弹窗了
+     * @type {boolean}
+     */
+    let isPopupShow = false
 
     /**
      * 向html中插入popup
@@ -158,10 +199,37 @@
      */
     function changeBoxSize(box) {
         document.querySelectorAll(class_label_card).forEach(function (item) {
+            let rect = item.getBoundingClientRect();
+            let width = rect.width;
             if (item === box) {
-                item.classList.add("choice");
+                // item.classList.add("choice");
+                item.animate([
+                    {
+                        "width": `${width}px`,
+                    },
+                    {
+                        "width": `532px`,
+                    }
+                ], {
+                    duration: 200,
+                    easing: 'ease-in-out',
+                    fill: "forwards"
+                })
             } else {
-                item.classList.remove("choice");
+                if (width === 444) return
+                // item.classList.remove("choice");
+                item.animate([
+                    {
+                        "width": `${width}px`,
+                    },
+                    {
+                        "width": `444px`,
+                    }
+                ], {
+                    duration: 200,
+                    easing: 'ease-in-out',
+                    fill: "forwards"
+                })
             }
         })
     }
@@ -178,20 +246,14 @@
     }
 
     /**
-     * 是否已经强制关闭了
-     * @type {boolean}
-     */
-    let isForceHide = false
-
-    /**
      * 强制关闭popup
      */
     function forceHidePopup(hasAnim) {
         if (hasAnim) {
-            isForceHide = true;
             changeVisible(false)
             return
         }
+        isPopupShow = false
         //移除所有动画
         setPopupAnimTag(false, true);
         setPopupAnimTag(true, true)
@@ -256,7 +318,7 @@
      * 改变可见性
      */
     function changeVisible(needShow) {
-
+        isPopupShow = needShow;
         let container_root = document.getElementById(id_label_root);
         if (container_root == null) {
             insertPopupHtml();
@@ -291,20 +353,27 @@
         }
     }
 
+
     //添加物理按键监听器 按下
     document.addEventListener('keydown', event => {
-        if (event.key === "a") {
-            if (isForceHide) return;
-            changeVisible(true)
-        }
-    });
 
-    //添加物理按键监听器 抬起
-    document.addEventListener('keyup', event => {
-        if (event.key === "a") {
-            isForceHide = false;
-            changeVisible(false)
+        function show() {
+            changeVisible(true);
         }
+
+        //todo 平台判断
+
+        let platformButton = event.altKey
+        let triggerKey = "w"
+
+        if (platformButton && event.key === triggerKey) {
+            show();
+        } else if (isPopupShow && event.key === triggerKey) {
+            //再次按下打开对应的ui，这个时候就需要强制隐藏了
+            forceHidePopup(false)
+            //todo open
+        }
+
     });
 
 
@@ -341,7 +410,7 @@
             /*向上滚动*/
             if (allBox.length !== 0) {
                 let first = allBox[0];
-                if (first.classList.contains("choice")) {
+                if (first === closestBox) {
                     event.preventDefault();
                 }
             }
@@ -349,12 +418,15 @@
             /*向下滚动*/
             if (allBox.length !== 0) {
                 let last = allBox[allBox.length - 1];
-                if (last.classList.contains("choice")) {
-                    event.preventDefault();
+                if (last === closestBox) {
+                    event.preventDefault()
                 }
             }
         }
     }
+
+    //距离屏幕中心最近的Box
+    let closestBox = null;
 
     /**
      * 计算中心位置widget
@@ -392,29 +464,20 @@
         if (captureBox !== null && captureBox !== closestBox) {
             closestBox = captureBox;
             changeBoxSize(closestBox)
-            console.log("最近的元素是：", closestBox.id);
+            // console.log("最近的元素是：", closestBox.id);
             // console.log("距离屏幕中心的距离是：", minDistance);
         }
     }
 
 
     /**
-     * 重新计算抽屉的上下预留边距，这样为了帮正每一个box都可以被居中显示
+     * 重新计算抽屉的上下预留边距，这样为了帮正每一个box都机会可以被居中显示
      */
     function resizeDrawerMargin() {
         /* 计算屏幕一般高度大小 */
         let windowHalfSize = window.innerHeight / 2;
-        //当box被选中的时候高度变化最终值
-        //todo 不能写死
-        let lastBoxHeight = 100;
-        let fixMargin = 0;
-
-        do {
-            fixMargin += lastBoxHeight;
-        } while (fixMargin < windowHalfSize)
-
-        document.getElementById(id_label_drawer).style.paddingTop = `${fixMargin}px`
-        document.getElementById(id_label_drawer).style.paddingBottom = `${fixMargin}px`
+        document.getElementById(id_label_drawer).style.paddingTop = `${windowHalfSize}px`
+        document.getElementById(id_label_drawer).style.paddingBottom = `${windowHalfSize}px`
     }
 
 
@@ -436,11 +499,11 @@
     /**
      * 跟布局点击
      */
-    function onRootViewClick(event){
+    function onRootViewClick(event) {
+        //强制关闭popup但是有动画
+        changeVisible(false);
         // 阻止事件冒泡
         event.stopPropagation();
-        //强制关闭popup但是有动画
-        forceHidePopup(true);
     }
 
 
@@ -463,7 +526,7 @@
      */
     function smoothScrollPx(scrollView, scrollPx) {
         const scrollDistance = scrollPx; // 滚动距离
-        console.log(scrollDistance)
+        // console.log(scrollDistance)
         const duration = 150; // 持续时间（毫秒）
 
         const startTime = Date.now(); // 起始时间
@@ -488,14 +551,78 @@
     }
 
     /**
-     * 添加
+     *  `
+     *  <div id="??" class="page_info_card">
+     *    <div class="page_info_card_desc_container">
+     *        <div class="page_info_card_desc">
+     *           网站名字
+     *        </div>
+     *        <div class="page_info_card_button" onclick="onOpenBtnClick()"> &#10132;</div>
+     *    </div>
+     *    <img alt="image" class="page_info_card_img" onload="style.display = 'block'" src="https://via.placeholder.com/320x150.png?text=no%20review" >
+     *   </div>
+     * `
+     *
      * @param boxId 为item设置id
+     * @param title 网站标题
+     * @param imgSrc 网站截图base64
      */
-    function addItem(boxId) {
+    function addItem(boxId, title, imgSrc) {
+        // 创建一个新的div元素
         let item = document.createElement("div");
         item.id = boxId;
-        item.onclick = onDrawerItemClick;
-        item.classList.add(id_label_card);
+        // 给新的div元素设置class属性
+        item.className = id_label_card;
+        item.onclick = onDrawerItemClick
+
+        //内容+操作=容器
+        let desc_container = document.createElement("div")
+        desc_container.className = "page_info_card_desc_container"
+
+        //页面标题
+        let desc = document.createElement("div");
+        desc.className = "page_info_card_desc"
+        desc.innerText = title
+        //操作 删除按钮
+        let delete_btn = document.createElement("div")
+        delete_btn.className = "page_info_card_button"
+        delete_btn.style.backgroundColor = "#e91e63"
+        delete_btn.innerHTML=`&#10006`
+        delete_btn.addEventListener("click",(event)=>{
+            event.stopPropagation();
+            //todo 测试
+            let closetParent = event.target.closest(class_label_card);
+            removeItem(closetParent.id)
+        })
+
+
+        //操作打开按钮
+        let open_btn = document.createElement("div");
+        open_btn.className = "page_info_card_button"
+        open_btn.style.backgroundColor = "#2196F3"
+        open_btn.innerHTML = `&#10132;`
+        open_btn.addEventListener("click",(event)=>{
+            event.stopPropagation();
+            //todo
+        })
+
+        desc_container.append(desc, delete_btn,open_btn)
+
+        //展示预览画面img
+        let card_img = document.createElement("img")
+        card_img.alt = "image"
+        card_img.className = "page_info_card_img"
+        card_img.onload = (iv) => {
+            iv.target.style.display = "block"
+        }
+        card_img.onerror = (iv) => {
+            iv.target.src = "no_preview.png"
+        }
+        card_img.src = imgSrc
+
+        item.append(desc_container, card_img)
+
+
         document.getElementById(id_label_drawer).appendChild(item);
     }
 
@@ -505,13 +632,13 @@
      */
     function removeItem(boxId) {
         // 找到要删除的 div 元素
-        let divToRemove = document.getElementById(testId);
+        let divToRemove = document.getElementById(boxId);
         // 如果找到了该 div 元素，则从列表中移除它
         if (divToRemove) {
             document.getElementById(id_label_drawer).removeChild(divToRemove);
         }
+        calculationCenterWidget()
     }
-
 
 </script>
 
