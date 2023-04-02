@@ -21,15 +21,25 @@
   "background": {
     "page": "background-page.html"
   },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "images/*.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
   "content_scripts": [
     {
       "matches": [
         "<all_urls>"
       ],
-      "js": [
-        "popup/popup_html.js",
-        "popup/popup.js"
-      ]
+      "css": [
+        "popup/popup_style.css"
+      ],
+      "js": ["popup/popup.js"]
     }
   ]
 }
