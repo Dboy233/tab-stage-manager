@@ -5,7 +5,14 @@ let id_label_card = "page_info_card";
 let class_label_card = `.${id_label_card}`;
 
 /**
- * 是否展示弹窗了
+ * 最大z-index值。popup的值+1
+ * 我都这个数值了应该没有比这个大的了。
+ * @type {number}
+ */
+let maxZIndex = 999999
+
+/**
+ * popup是否已经被显示
  * @type {boolean}
  */
 let isPopupShow = false
@@ -15,12 +22,10 @@ let isPopupShow = false
  */
 function insertPopupHtml() {
 
-
-
-
     const popupRootView = document.createElement('div');
     popupRootView.id = 'popup_root_view';
     popupRootView.onclick = onRootViewClick;
+    popupRootView.style.zIndex = maxZIndex.toString()
 
     const popupLeftDrawer = document.createElement('div');
     popupLeftDrawer.id = 'popup_left_drawer';
@@ -29,6 +34,7 @@ function insertPopupHtml() {
 
     document.body.appendChild(popupRootView);
 
+    //测试数据
     testData()
 }
 
@@ -50,7 +56,6 @@ function changeBoxSize(box) {
         let rect = item.getBoundingClientRect();
         let width = rect.width;
         if (item === box) {
-            // item.classList.add("choice");
             item.animate([
                 {
                     "width": `${width}px`,
@@ -65,7 +70,6 @@ function changeBoxSize(box) {
             })
         } else {
             if (width === 444) return
-            // item.classList.remove("choice");
             item.animate([
                 {
                     "width": `${width}px`,
@@ -116,10 +120,10 @@ function forceHidePopup(hasAnim) {
  */
 function addNecessaryEventListener() {
     let container_root = document.getElementById(id_label_root);
-    container_root.addEventListener("scroll", calculationCenterWidget);
-    container_root.addEventListener("wheel", calculationStopScroll,true);
+    container_root.addEventListener("scroll", calculationCenterWidget, true);
+    container_root.addEventListener("wheel", calculationStopScroll, true);
     window.addEventListener("resize", onWindowSizeChange)
-    document.addEventListener('scroll', calculationPopupPositionInWindow,true);
+    document.addEventListener('scroll', calculationPopupPositionInWindow);
 }
 
 /**
@@ -128,17 +132,17 @@ function addNecessaryEventListener() {
 function removeNecessaryEventListener() {
     let container_root = document.getElementById(id_label_root);
     container_root.removeEventListener("scroll", calculationCenterWidget);
-    container_root.removeEventListener("wheel", calculationStopScroll,true);
+    container_root.removeEventListener("wheel", calculationStopScroll);
     window.removeEventListener("resize", onWindowSizeChange)
-    document.removeEventListener('scroll', calculationPopupPositionInWindow,true);
+    document.removeEventListener('scroll', calculationPopupPositionInWindow);
 }
 
 /**
  * 设置popup动画属性
  * @param isShow true弹出，false关闭
- * @param isClear 如果是true 将不会add新的动画，只会移除。所以要完全移除，调用两次这个方法
+ * @param dontAddNewAnim 如果是true 将不会add新的动画，只会移除。所以要完全移除，调用两次这个方法
  */
-function setPopupAnimTag(isShow, isClear) {
+function setPopupAnimTag(isShow, dontAddNewAnim) {
 
     let addTag;
     let removeTag
@@ -150,12 +154,12 @@ function setPopupAnimTag(isShow, isClear) {
         addTag = "hide"
         removeTag = "show"
     }
-
     let container_root = document.getElementById(id_label_root);
+
     container_root.classList.remove(`popup_root_${removeTag}_class`);
     document.getElementById(id_label_drawer).classList.remove(`popup_drawer_${removeTag}_class`);
 
-    if (!isClear) {
+    if (!dontAddNewAnim) {
         container_root.classList.add(`popup_root_${addTag}_class`);
         document.getElementById(id_label_drawer).classList.add(`popup_drawer_${addTag}_class`);
     }
@@ -173,57 +177,28 @@ function changeVisible(needShow) {
         container_root = document.getElementById(id_label_root);
     }
 
-
     let isShowing = container_root.classList.contains("popup_root_show_class");
-    //通过是否有show属性派判断容器是否已经在展示了。同时判断是否需要显示，这样放置逻辑多次触发。
+    //通过是否有show属性派判断容器是否已经在展示了。同时判断是否需要显示，这样防止逻辑多次触发。
     if (isShowing && !needShow) {
         /*hide*/
-        console.log("HIDE")
         /*关闭的时候需要监听结束 这个操作和 removeNecessaryEventListener逻辑相反。所以不能一起操作*/
         container_root.addEventListener('animationend', onPopupCloseAnimEnd);
         /*必要的监听器移除*/
         removeNecessaryEventListener();
+        /*设置hide动画*/
         setPopupAnimTag(false)
     } else if (!isShowing && needShow) {
         /*show*/
-        console.log("SHOW")
         /*show的时候不需要关闭动画 这个操作和 addNecessaryEventListener逻辑相反。所以不能一起操作*/
         container_root.removeEventListener('animationend', onPopupCloseAnimEnd);
         /*必要的监听器添加*/
         addNecessaryEventListener();
-
+        /*设置添加动画*/
         setPopupAnimTag(true)
-
-        //主动触发窗口的改变
+        //调整大小和位置
         onWindowSizeChange();
-
-        container_root.setAttribute('tabindex', '0');
     }
 }
-
-//当快捷键按下的时候触发
-function onKeyDown(event){
-    function show() {
-        changeVisible(true);
-    }
-
-    //todo 平台判断
-
-    let platformButton = event.altKey
-    let triggerKey = "w"
-
-    if (platformButton && event.key === triggerKey) {
-        show();
-    } else if (isPopupShow && event.key === triggerKey) {
-        //再次按下打开对应的ui，这个时候就需要强制隐藏了
-        forceHidePopup(false)
-        //todo open
-    }
-
-}
-
-
-
 
 
 /**
@@ -249,7 +224,9 @@ function onWindowSizeChange() {
 function calculationPopupPositionInWindow() {
     let bodyTop = document.body.getBoundingClientRect().top;
     let container_root = document.getElementById(id_label_root);
-    container_root.style.top = Math.abs(bodyTop) + "px"
+    if (container_root) {
+        container_root.style.top = Math.abs(bodyTop) + "px";
+    }
 }
 
 
@@ -324,6 +301,15 @@ function calculationCenterWidget() {
     }
 }
 
+/**
+ * 获取距离屏幕中心最近的item id
+ */
+function getClosetItemId() {
+    if (closestBox) {
+        return closestBox.id;
+    }
+}
+
 
 /**
  * 重新计算抽屉的上下预留边距，这样为了帮正每一个box都机会可以被居中显示
@@ -332,7 +318,6 @@ function resizeDrawerMargin() {
     /* 计算屏幕一般高度大小 */
     let windowHalfSize = window.innerHeight / 2;
     let root_view = document.getElementById(id_label_drawer);
-    console.log(root_view.offsetHeight+"----"+windowHalfSize)
     root_view.style.marginTop = `${windowHalfSize}px`
     root_view.style.marginBottom = `${windowHalfSize}px`
 }
@@ -344,14 +329,6 @@ function testData() {
     }
 }
 
-/**
- * 抽屉item点击事件
- */
-function onDrawerItemClick(event) {
-    // 阻止事件冒泡
-    event.stopPropagation();
-    scrollToItem(this.id)
-}
 
 /**
  * 跟布局点击
@@ -397,9 +374,7 @@ function smoothScrollPx(scrollView, scrollPx) {
         const easeOutQuad = (t) => t * (2 - t); // 缓动函数（这里使用了缓出二次函数）
 
         // 新的滚动位置
-        let scrollTop = startPosition + (endPosition - startPosition) * easeOutQuad(progress);
-        console.log(scrollTop)
-        scrollView.scrollTop = scrollTop; // 设置新的滚动位置
+        scrollView.scrollTop = startPosition + (endPosition - startPosition) * easeOutQuad(progress); // 设置新的滚动位置
         if (progress < 1) { // 如果还未达到指定的持续时间，则继续滚动
             requestAnimationFrame(smoothScroll);
         }
@@ -416,6 +391,8 @@ function smoothScrollPx(scrollView, scrollPx) {
  *        <div class="page_info_card_desc">
  *           网站名字
  *        </div>
+ *        //removeBtn
+ *        //goBtn
  *        <div class="page_info_card_button" onclick="onOpenBtnClick()"> &#10132;</div>
  *    </div>
  *    <img alt="image" class="page_info_card_img" onload="style.display = 'block'" src="https://via.placeholder.com/320x150.png?text=no%20review" >
@@ -430,9 +407,12 @@ function addItem(boxId, title, imgSrc) {
     // 创建一个新的div元素
     let item = document.createElement("div");
     item.id = boxId;
-    // 给新的div元素设置class属性
     item.className = id_label_card;
-    item.onclick = onDrawerItemClick
+    item.addEventListener("click", (event) => {
+        scrollToItem(event.target.id)
+        // 阻止事件冒泡
+        event.stopPropagation();
+    })
 
     //内容+操作=容器
     let desc_container = document.createElement("div")
@@ -448,12 +428,11 @@ function addItem(boxId, title, imgSrc) {
     delete_btn.style.backgroundColor = "#e91e63"
     delete_btn.innerHTML = `&#10006`
     delete_btn.addEventListener("click", (event) => {
-        event.stopPropagation();
-        //todo 测试
         let closetParent = event.target.closest(class_label_card);
-        removeItem(closetParent.id)
-    })
+        sendRemoveTab(closetParent.id)
+        event.stopPropagation();
 
+    })
 
     //操作打开按钮
     let open_btn = document.createElement("div");
@@ -461,10 +440,9 @@ function addItem(boxId, title, imgSrc) {
     open_btn.style.backgroundColor = "#2196F3"
     open_btn.innerHTML = `&#10132;`
     open_btn.addEventListener("click", (event) => {
-        // event.stopPropagation();
         let closetParent = event.target.closest(class_label_card);
-        scrollToItem(closetParent.id)
-        //todo
+        sendOpenTab(closetParent.id)
+        event.stopPropagation();
     })
 
     desc_container.append(desc, delete_btn, open_btn)
@@ -477,8 +455,8 @@ function addItem(boxId, title, imgSrc) {
         iv.target.style.display = "block"
     }
     card_img.onerror = (iv) => {
-        let url = brower.runtime.getUrl("popup/no_preview.png");
-        console.log(url)
+        // let url = brower.runtime.getUrl("popup/no_preview.png");
+        // console.log(url)
     }
     card_img.src = imgSrc
 
@@ -499,90 +477,242 @@ function removeItem(boxId) {
     if (divToRemove) {
         document.getElementById(id_label_drawer).removeChild(divToRemove);
     }
+    //重新计算中心位置
     calculationCenterWidget()
 }
 
 
-document.addEventListener('keydown', onKeyDown);
-
-//
-// async function getMaxZIndex() {
-//     // 获取 body 元素和所有 Element 类型的子元素
-//     const body = document.body;
-//     const elements = body.getElementsByTagName('*');
-//     console.log(elements.length)
-//     let maxZIndex = -Infinity;
-//
-//     // 遍历所有子元素，检查其 z-index 属性
-//     for (let i = 0; i < elements.length; i++) {
-//         const element = elements[i];
-//         if (element instanceof Element) {
-//             const zIndex = parseInt(getComputedStyle(element).getPropertyValue('z-index'));
-//             if (!isNaN(zIndex)) {
-//                 maxZIndex = Math.max(maxZIndex, zIndex);
-//             }
-//         }
-//     }
-//
-//     return maxZIndex;
-// }
-//
-// // 调用函数
-//  getMaxZIndex().then((value)=>{
-//      console.log("value = "+value);
-//  });
-
-
-
+/**
+ * 获取网页上最大的z-index，popup的z轴要确保在最顶层。
+ * @returns {Promise<null|number>}
+ */
 async function getMaxZIndex() {
-    const elements = document.body.getElementsByTagName('*');
-    const map = new Map();
+    // console.time("getMaxZIndex")
     let maxZIndex = -Infinity;
-    let currentIndex = 0;
-    const taskCount = 8;
-    const batchSize = Math.ceil(elements.length / taskCount);
+    const styleSheets = document.styleSheets;
+    const rulesWithZIndex = [];
 
-    // 预处理元素属性值
-    for (let i = 0; i < elements.length; i++) {
-        const element = elements[i];
-        if (element instanceof Element ) {
-            const zIndex = parseInt(getComputedStyle(element).getPropertyValue('z-index'));
-            if (!isNaN(zIndex)) {
-                map.set(element, zIndex);
+    for (const styleSheet of styleSheets) {
+        let rules = [];
+        try {
+            rules = styleSheet.cssRules || styleSheet.rules || [];
+        } catch (e) {
+            console.warn(e)
+            continue;
+        }
+
+        for (const rule of rules) {
+            if (rule.type === CSSRule.STYLE_RULE && rule.style.zIndex !== "") {
+                rulesWithZIndex.push(parseInt(rule.style.zIndex));
             }
         }
     }
 
-    // 并行处理元素
-    const tasks = Array.from({ length: taskCount }, () => []);
-    for (let i = 0; i < elements.length; i++) {
-        const element = elements[i];
-        if (map.has(element)) {
-            tasks[i % taskCount].push(element);
-        }
-    }
 
-    const promises = tasks.map(async (group) => {
-        let maxZIndex = -Infinity;
-        for (const element of group) {
-            const zIndex = map.get(element);
-            if (zIndex !== undefined) {
-                maxZIndex = Math.max(maxZIndex, zIndex);
+    function insertionSort(arr, start, end) {
+        for (let i = start + 1; i <= end; i++) {
+            let j = i;
+            while (j > start && arr[j] < arr[j - 1]) {
+                [arr[j - 1], arr[j]] = [arr[j], arr[j - 1]];
+                j--;
             }
         }
-        return maxZIndex;
-    });
-
-    const results = await Promise.all(promises);
-    for (const result of results) {
-        maxZIndex = Math.max(maxZIndex, result);
     }
 
-    return maxZIndex;
+    function merge(arr, aux, low, mid, high) {
+        let i = low;
+        let j = mid + 1;
+
+        for (let k = low; k <= high; k++) {
+            aux[k] = arr[k];
+        }
+
+        for (let k = low; k <= high; k++) {
+            if (i > mid) {
+                arr[k] = aux[j++];
+            } else if (j > high) {
+                arr[k] = aux[i++];
+            } else if (aux[j] < aux[i]) {
+                arr[k] = aux[j++];
+            } else {
+                arr[k] = aux[i++];
+            }
+        }
+    }
+
+    //timeSort算法.来自chatgpt
+    function timSort(arr) {
+        const minRunLength = 32;
+        const n = arr.length;
+        const aux = new Array(n);
+
+        for (let i = 0; i < n; i += minRunLength) {
+            insertionSort(arr, i, Math.min(i + minRunLength - 1, n - 1));
+        }
+
+        for (let size = minRunLength; size < n; size *= 2) {
+            for (let left = 0; left < n; left += 2 * size) {
+                const mid = left + size - 1;
+                const right = Math.min((left + 2 * size - 1), (n - 1));
+
+                if (mid < right) {
+                    merge(arr, aux, left, mid, right);
+                }
+            }
+        }
+
+        return arr;
+    }
+
+    //获取最大值
+    if (rulesWithZIndex.length > 0) {
+        timSort(rulesWithZIndex)
+        maxZIndex = parseInt(rulesWithZIndex[rulesWithZIndex.length - 1]);
+    }
+    // console.timeEnd("getMaxZIndex")
+    return maxZIndex === -Infinity ? null : maxZIndex;
 }
 
-// 调用函数
-getMaxZIndex().then((maxZIndex) => {
-    console.log(maxZIndex);
+//执行获取最大z-index操作
+getMaxZIndex().then((max) => {
+    if (max != null) {
+        //大一个就行
+        maxZIndex = Math.max(max + 1, maxZIndex);
+    }
+})
+
+function getRandomMsgId() {
+    const min = 0;
+    const max = 1000;
+    //通过两次随机完全防止发生重复几率而且一正一负更不容易相同。希望如此
+    let id1 = Math.floor(Math.random() * (max - min)) + min;
+    let id2 = -Math.floor(Math.random() * (max - min)) + min;
+
+    return `popup_page_id-${id1}${id2}`;
+}
+
+//=====================快捷键====================
+
+/**
+ * win平台快捷键触发
+ */
+function onWinKeyDown(event) {
+    onKeyDown(event, event.altKey, "w")
+}
+
+/**
+ * mac平台快捷键触发
+ */
+function onMacKeyDown(event) {
+    onKeyDown(event, event.metaKey, "e")
+}
+
+/**
+ * 是否已经请求显示
+ * @type {boolean}
+ */
+let isRequestShow = false;
+
+function showOrHide() {
+    if (isPopupShow) {
+        changeVisible(false)
+    } else {
+        changeVisible(true);
+    }
+}
+
+/**
+ * 快捷键触发
+ * @param event 事件
+ * @param firstKey 按下第一个key
+ * @param secondKey 按下第二个key
+ */
+function onKeyDown(event, firstKey, secondKey) {
+    if (isRequestShow) return;
+    if (firstKey && event.key === secondKey) {
+        isRequestShow = true;
+        //发送获取所有tab信息请求。
+        sendGetAllTabs();
+    } else if (isPopupShow && event.key === secondKey) {
+        //发送打开tab请求。
+        sendOpenTab(getClosetItemId())
+    }
+}
+
+
+//不同平台使用不同的按键
+if (navigator.platform.toUpperCase().includes("MAC")) {
+    document.addEventListener('keydown', onMacKeyDown)
+} else {
+    document.addEventListener('keydown', onWinKeyDown);
+}
+
+//=====================消息接收================================
+/**
+ * js消息通知id
+ * @type {string}
+ */
+const popupMsgId = getRandomMsgId()
+
+//注册消息通道
+const popupPort = browser.runtime.connect({"portId": popupMsgId});
+//接收消息
+popupPort.onMessage.addListener(function (msg) {
+    switch (msg.msg) {
+        case "msg_all_tabs":
+            //得到所有tab信息，接下来就是展示了
+            isRequestShow = false;
+            showOrHide();
+            msg.tabs.forEach((tab) => {
+                console.log(tab)
+            })
+            break;
+        case "msg_force_hide_popup":
+            //强制hide popup ui
+            forceHidePopup(false);
+            break;
+        case "msg_tab_preview_img":
+            //得到某个tab的预览图
+            console.log(msg.tabId, msg.img)
+            //todo
+            break;
+        case "msg_tabs_preview_img":
+            //得到一组tab的预览图
+            console.log(msg.imgs)
+            break;
+        case "msg_tab_remove_state":
+            //删除某个标签事件状态
+            if (msg.state) {
+                removeItem(msg.tabId)
+            }
+            break
+        default:
+            console.warn("no msg handle", msg.msg)
+    }
 });
 
+/**
+ * 发送获取所有tabs信息
+ */
+function sendGetAllTabs() {
+    popupPort.postMessage({
+        msg: "msg_all_tabs"
+    })
+}
+
+function sendRemoveTab(id) {
+    popupPort.postMessage({
+        msg: "msg_remove_tab",
+        tabId: id,
+    })
+}
+
+function sendOpenTab(id) {
+    popupPort.postMessage({
+        msg: "msg_open_tab",
+        tabId: id,
+    })
+}
+
+
+console.log("fucking is done")

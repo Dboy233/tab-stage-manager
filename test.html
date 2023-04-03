@@ -1,37 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>获取元素的样式</title>
-  <style>
-    #myDiv {
-      width: 100px;
-      height: 100px;
-      background-color: red;
-      margin: 10px;
-      padding: 20px;
-      border: 5px solid black;
-      z-index: 123321;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Title</title>
 </head>
 <body>
-<div id="myDiv"></div>
-<script>
-  // 获取id为myDiv的元素
-  var myDiv = document.getElementById("myDiv");
-
-  // 获取元素的样式
-  var style = window.getComputedStyle(myDiv);
-
-  // 输出元素的某些样式
-  console.log(style.width); // 输出 "100px"
-  console.log(style.height); // 输出 "100px"
-  console.log(style.backgroundColor); // 输出 "rgb(255, 0, 0)"
-  console.log(style.margin); // 输出 "10px"
-  console.log(style.padding); // 输出 "20px"
-  console.log(style.border); // 输出 "5px solid black"
-  console.log(style.zIndex)
-</script>
+<script src="test.js" type="module"></script>
 </body>
 </html>

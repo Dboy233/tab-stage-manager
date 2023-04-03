@@ -1,18 +1,21 @@
 // noinspection JSUnresolvedVariable,JSDeprecatedSymbols
 
-import {tabReview_firefox} from "./background-firefox.js";
-import {tabReview_chrome} from "./background-chrome.js";
+import {ChromePlatformHandle, FireFoxPlatformHandle} from "./platform_handle.js";
 
-let tabReview = tabReview_firefox;
+//平台差异性处理工具
+let platformHandle = new FireFoxPlatformHandle();
+//浏览器命名空间
 let browser;
-
+//判断平台
 if (typeof browser === "undefined") {
     browser = chrome;
-    tabReview = tabReview_chrome;
+    platformHandle = new ChromePlatformHandle();
 }
 
+//窗口的tab对应字典表
 let windowMap = new Map();
 
+//tab拖拽离开窗口缓存
 let detachedTabTemp = [];
 
 
@@ -208,12 +211,51 @@ function formatImg(base64, reWidth) {
 
 }
 
-browser.permissions.onAdded.addListener(permissions=>{
+browser.permissions.onAdded.addListener(permissions => {
     console.log(`add API permissions: ${permissions.permissions}`);
     console.log(`add host permissions: ${permissions.origins}`);
 })
 
-browser.permissions.onRemoved.addListener(permissions=>{
+browser.permissions.onRemoved.addListener(permissions => {
     console.log(`Removed API permissions: ${permissions.permissions}`);
     console.log(`Removed host permissions: ${permissions.origins}`);
 })
+
+/**
+ * 获取当前window的所有tab信息
+ */
+async function getCurrentWindowTabInfo() {
+    if (windowMap.has(browser.windows.WINDOW_ID_CURRENT)) {
+        let tabs = await browser.tabs.query({
+            "currentWindow": true
+        })
+        if (tabs) {
+            for (let tab of tabs) {
+
+            }
+        }
+    }
+}
+
+
+//=============================消息接收=====================
+let portMap = new Map();
+
+function connected(port) {
+    portMap[port.name] = port;
+    port.onMessage.addListener(onContentJsMsg);
+}
+
+function onContentJsMsg(msg) {
+    switch (msg.msg) {
+        case "msg_all_tabs":
+
+            break
+        case "msg_remove_tab":
+            break
+        case "msg_open_tab":
+            break
+    }
+}
+
+browser.runtime.onConnect.addListener(connected);
