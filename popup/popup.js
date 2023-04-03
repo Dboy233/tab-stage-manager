@@ -34,8 +34,6 @@ function insertPopupHtml() {
 
     document.body.appendChild(popupRootView);
 
-    //测试数据
-    testData()
 }
 
 /**
@@ -323,13 +321,6 @@ function resizeDrawerMargin() {
 }
 
 
-function testData() {
-    for (let i = 0; i < 5; i++) {
-        addItem("id_" + i)
-    }
-}
-
-
 /**
  * 跟布局点击
  */
@@ -408,11 +399,11 @@ function addItem(boxId, title, imgSrc) {
     let item = document.createElement("div");
     item.id = boxId;
     item.className = id_label_card;
-    item.addEventListener("click", (event) => {
-        scrollToItem(event.target.id)
-        // 阻止事件冒泡
+    item.onclick = (event) => {
         event.stopPropagation();
-    })
+        let closetParent = event.target.closest(class_label_card);
+        scrollToItem(closetParent.id)
+    }
 
     //内容+操作=容器
     let desc_container = document.createElement("div")
@@ -428,11 +419,10 @@ function addItem(boxId, title, imgSrc) {
     delete_btn.style.backgroundColor = "#e91e63"
     delete_btn.innerHTML = `&#10006`
     delete_btn.addEventListener("click", (event) => {
+        event.stopPropagation();
         let closetParent = event.target.closest(class_label_card);
         sendRemoveTab(closetParent.id)
-        event.stopPropagation();
-
-    })
+    }, true)
 
     //操作打开按钮
     let open_btn = document.createElement("div");
@@ -440,10 +430,11 @@ function addItem(boxId, title, imgSrc) {
     open_btn.style.backgroundColor = "#2196F3"
     open_btn.innerHTML = `&#10132;`
     open_btn.addEventListener("click", (event) => {
+        event.stopPropagation();
         let closetParent = event.target.closest(class_label_card);
         sendOpenTab(closetParent.id)
-        event.stopPropagation();
-    })
+        showOrHide();
+    }, true)
 
     desc_container.append(desc, delete_btn, open_btn)
 
@@ -452,18 +443,29 @@ function addItem(boxId, title, imgSrc) {
     card_img.alt = "image"
     card_img.className = "page_info_card_img"
     card_img.onload = (iv) => {
+        console.log("onload", iv)
         iv.target.style.display = "block"
     }
     card_img.onerror = (iv) => {
         // let url = brower.runtime.getUrl("popup/no_preview.png");
-        // console.log(url)
+        console.log("onerror", iv)
     }
-    card_img.src = imgSrc
+    // card_img.src = imgSrc
 
     item.append(desc_container, card_img)
 
 
     document.getElementById(id_label_drawer).appendChild(item);
+}
+
+/**
+ * 设置item的预览图片
+ * @param id tabId
+ * @param imgSrc 图片base64
+ */
+function setItemImg(id, imgSrc) {
+    let elements = document.querySelectorAll("#" + id + "." + id_label_card);
+    console.log(elements)
 }
 
 /**
@@ -641,6 +643,7 @@ function onKeyDown(event, firstKey, secondKey) {
 
 
 //不同平台使用不同的按键
+console.log(navigator.platform, "平台")
 if (navigator.platform.toUpperCase().includes("MAC")) {
     document.addEventListener('keydown', onMacKeyDown)
 } else {
@@ -652,38 +655,37 @@ if (navigator.platform.toUpperCase().includes("MAC")) {
  * js消息通知id
  * @type {string}
  */
-const popupMsgId = getRandomMsgId()
+const popupPortId = getRandomMsgId();
 
 //注册消息通道
-const popupPort = browser.runtime.connect({"portId": popupMsgId});
+const popupPort = browser.runtime.connect({"name": popupPortId});
 //接收消息
 popupPort.onMessage.addListener(function (msg) {
+    console.log("返回消息", msg)
     switch (msg.msg) {
-        case "msg_all_tabs":
+        case "msg_result_all_tabs":
             //得到所有tab信息，接下来就是展示了
             isRequestShow = false;
+            let activeTab = null;
             showOrHide();
-            msg.tabs.forEach((tab) => {
-                console.log(tab)
+            msg.data.tabs.forEach((tab) => {
+                addItem(tab.tabId, tab.title)
+                if (tab.isActive) {
+                    activeTab = tab;
+                }
             })
+            if (activeTab != null) {
+                console.log("主动滚动到="+activeTab)
+                scrollToItem(activeTab.tabId)
+            }
             break;
-        case "msg_force_hide_popup":
-            //强制hide popup ui
-            forceHidePopup(false);
-            break;
-        case "msg_tab_preview_img":
-            //得到某个tab的预览图
-            console.log(msg.tabId, msg.img)
-            //todo
-            break;
-        case "msg_tabs_preview_img":
-            //得到一组tab的预览图
-            console.log(msg.imgs)
-            break;
-        case "msg_tab_remove_state":
+        case "msg_result_open_tab":
+            changeVisible(false)
+            break
+        case "msg_result_remove_tab":
             //删除某个标签事件状态
-            if (msg.state) {
-                removeItem(msg.tabId)
+            if (msg.data.success) {
+                removeItem(msg.data.tabId)
             }
             break
         default:
@@ -695,22 +697,28 @@ popupPort.onMessage.addListener(function (msg) {
  * 发送获取所有tabs信息
  */
 function sendGetAllTabs() {
-    popupPort.postMessage({
-        msg: "msg_all_tabs"
-    })
+    sendMsg("msg_request_all_tabs")
 }
 
 function sendRemoveTab(id) {
-    popupPort.postMessage({
-        msg: "msg_remove_tab",
-        tabId: id,
+    sendMsg("msg_request_remove_tab", {
+        tabId: id
     })
 }
 
 function sendOpenTab(id) {
-    popupPort.postMessage({
-        msg: "msg_open_tab",
+    sendMsg("msg_request_open_tab", {
         tabId: id,
+    })
+}
+
+
+function sendMsg(msg, data) {
+    console.log("发送消息", msg, data)
+    popupPort.postMessage({
+        portId: popupPortId,
+        msg: msg,
+        data: data,
     })
 }
 

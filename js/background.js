@@ -5,257 +5,142 @@ import {ChromePlatformHandle, FireFoxPlatformHandle} from "./platform_handle.js"
 //平台差异性处理工具
 let platformHandle = new FireFoxPlatformHandle();
 //浏览器命名空间
-let browser;
-//判断平台
-if (typeof browser === "undefined") {
-    browser = chrome;
-    platformHandle = new ChromePlatformHandle();
-}
-
-//窗口的tab对应字典表
-let windowMap = new Map();
-
-//tab拖拽离开窗口缓存
-let detachedTabTemp = [];
 
 
-function onTabCreate(tab, tabPosition, windowId) {
-    // console.log(`onTabCreate : ${tab.id}-${tabPosition}-${windowId}`)
-
-    const wId = (typeof windowId === "undefined") ? tab.windowId : windowId;
-
-    const index = (typeof tabPosition === "undefined") ? tab.index : tabPosition;
-
-    let target_window_tabs;
-    if (windowMap.has(wId)) {
-        target_window_tabs = windowMap.get(wId);
-    } else {
-        target_window_tabs = []
-        windowMap.set(wId, target_window_tabs);
-    }
-    //长度等于下表那就是末尾累加
-    if (target_window_tabs.length === index) {
-        //末尾累加
-        target_window_tabs.push(tab)
-    } else if (target_window_tabs.length > index) {
-        //插入
-        target_window_tabs.splice(index, 0, tab)
-    }
-    // console.log(target_window_tabs.map(value => value.id).join(","))
-}
-
-function onTabRemoved(tabId, removeInfo) {
-    let windowId = removeInfo.windowId;
-    // console.log(`Tab: ${tabId} closing ， window id ${windowId}, window close ${removeInfo.isWindowClosing}`);
-    if (!windowMap.has(windowId)) {
-        console.log("没有这个window");
-        return;
-    }
-    let tabs = windowMap.get(windowId);
-    if (removeInfo.isWindowClosing) {
-        tabs.splice(0, tabs.length);
-        windowMap.delete(windowId);
-        return;
-    }
-    //倒着遍历这样更安全
-    for (let i = tabs.length - 1; i >= 0; i--) {
-        if (tabs[i].id === tabId) {
-            //移除
-            tabs.splice(i, 1)
-            break;
-        }
-    }
-}
-
-function onTabMoved(tabId, moveInfo) {
-    let fromIndex = moveInfo.fromIndex;
-    let toIndex = moveInfo.toIndex;
-
-    // console.log(`Tab ${tabId} moved from ${fromIndex} to ${toIndex}`);
-
-    function remove(tab) {
-        let windowId = tab.windowId;
-        if (!windowMap.has(windowId)) {
-            return;
-        }
-        let tabs = windowMap.get(windowId);
-        //交换位置
-        [tabs[fromIndex], tabs[toIndex]] = [tabs[toIndex], tabs[fromIndex]]
-        console.log(tabs.map(value => value.id).join(","))
-    }
-
-    browser.tabs.get(tabId).then(remove)
-}
-
-function onAttachedNewWindow(tabId, attachInfo) {
-    let newWindowId = attachInfo.newWindowId;
-    let newPosition = attachInfo.newPosition;
-    // console.log(`Tab: ${tabId} attached`);
-    // console.log(`New window: ${newWindowId}`);
-    // console.log(`New index: ${newPosition}`);
-
-    let tab = null;
-
-    for (let i = detachedTabTemp.length - 1; i >= 0; i--) {
-        let detachedTabTempElement = detachedTabTemp[i];
-        if (detachedTabTempElement.id === tabId) {
-            tab = detachedTabTempElement;
-            detachedTabTemp.splice(i, 1);
-            break;
-        }
-    }
-
-    if (tab == null) {
-        return;
-    }
-
-    onTabCreate(tab, newPosition, newWindowId);
-}
-
-function onTabDetached(tabId, detachInfo) {
-    let oldWindowId = detachInfo.oldWindowId;
-    let oldPosition = detachInfo.oldPosition;
-    if (!windowMap.has(oldWindowId)) {
-        console.log("旧的窗口不存在")
-        return;
-    }
-    let tabs = windowMap.get(oldWindowId);
-    //fix
-    let detached = tabs.splice(oldPosition, 1);
-    console.log(windowMap.get(oldWindowId).map(t => t.id).join(","))
-    detachedTabTemp.push(detached[0]);
-    //old
-    // for (let i = tabs.length - 1; i >= 0; i--) {
-    //     let tab = tabs[i];
-    //     if (tab.id === tabId) {
-    //         tabs.splice(i, 1);
-    //         console.log(windowMap.get(oldWindowId).map(t => t.id).join(","))
-    //         detachedTabTemp.push(tab);
-    //         return;
-    //     }
-    // }
-}
-
-function onTabActivated(activeInfo) {
-    console.log(`windows ${activeInfo.windowId}, Tab ${activeInfo.tabId} 激活, Tab ${activeInfo.previousTabId}`);
-}
-
-
-// 监听tab事件
-browser.tabs.onCreated.addListener(onTabCreate);
-browser.tabs.onRemoved.addListener(onTabRemoved)
-browser.tabs.onMoved.addListener(onTabMoved)
-browser.tabs.onAttached.addListener(onAttachedNewWindow)
-browser.tabs.onDetached.addListener(onTabDetached)
-browser.tabs.onActivated.addListener(onTabActivated)
-
-
-browser.runtime.onInstalled.addListener(() => {
-    browser.tabs.query({}).then(tabs => {
-        for (let mTab of tabs) {
-            onTabCreate(mTab);
-        }
-    })
-});
-
-
-browser.action.onClicked.addListener(() => {
-    console.log(tabReview_firefox)
-
-    function onCaptured(imageUri) {
-        // formatImg(imageUri,600);
-    }
-
-    function onError(error) {
-        console.log(`Error: ${error}`);
-    }
-
-    // browser.tabs.captureVisibleTab(browser.windows.WINDOW_ID_CURRENT,{ format: 'jpeg', quality: 50 }).then(onCaptured,onError);
-
-});
-
-//可能不用
-function formatImg(base64, reWidth) {
-    console.log("格式化图片")
-    // 创建一个Image对象
-    var img = new Image();
-
-    // 设置图片的src属性为base64格式的字符串
-    img.src = base64;
-
-    // 等待图片加载完成后执行操作
-    img.onload = function () {
-        // 创建一个Canvas元素
-        var canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        console.log("img width " + width)
-        console.log("img height " + height)
-        // 设置Canvas的宽高
-        canvas.width = reWidth;
-        canvas.height = (height / width) * reWidth;
-
-        // canvas.width = width;
-        // canvas.height = height;
-
-        // 获取Canvas的2D上下文
-        var ctx = canvas.getContext('2d');
-
-        // 绘制图片到Canvas上
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        // 将Canvas转化为base64格式的图片
-        var resizedImg = canvas.toDataURL();
-        console.log(resizedImg)
-    };
-
-}
-
-browser.permissions.onAdded.addListener(permissions => {
-    console.log(`add API permissions: ${permissions.permissions}`);
-    console.log(`add host permissions: ${permissions.origins}`);
-})
-
-browser.permissions.onRemoved.addListener(permissions => {
-    console.log(`Removed API permissions: ${permissions.permissions}`);
-    console.log(`Removed host permissions: ${permissions.origins}`);
-})
+// let browser = "browser";
+// console.log(browser.runtime.getPlatformInfo())
+// //判断平台
+// if (typeof browser === "undefined") {
+//     console.log("切换平台")
+//     browser = chrome;
+//     platformHandle = new ChromePlatformHandle();
+// }
 
 /**
  * 获取当前window的所有tab信息
  */
-async function getCurrentWindowTabInfo() {
-    if (windowMap.has(browser.windows.WINDOW_ID_CURRENT)) {
-        let tabs = await browser.tabs.query({
-            "currentWindow": true
-        })
-        if (tabs) {
-            for (let tab of tabs) {
-
-            }
+async function getCurrentWindowTabInfo(portId) {
+    function createInfo(tab) {
+        // let img = await platformHandle.captureTab(tab.id)
+        return {
+            tabId: tab.id,
+            title: tab.title,
+            isActive: tab.active,
+            url: tab.url,
+            // img: img,
         }
     }
+
+    let tabs = await browser.tabs.query({
+        "currentWindow": true
+    })
+
+    let list = [];
+    for (let tab of tabs) {
+        list.push(createInfo(tab))
+    }
+    sendMsg(portId, "msg_result_all_tabs", {
+        success: true,
+        tabs: list,
+    })
+}
+
+
+/**
+ * 打开标签
+ * @param portId 端口id
+ * @param tabId tab id
+ */
+function openTab(portId, tabId) {
+    browser.tabs.update(
+        parseInt(tabId),
+        {active: true}
+    ).then(() => {
+        sendMsg(portId, "msg_result_open_tab", {
+            tabId: tabId,
+            success: true
+        })
+    }).catch((e) => {
+        sendMsg(portId, "msg_result_open_tab", {
+            tabId: tabId,
+            success: false
+        })
+    })
+}
+
+/**
+ * 移除某个标签
+ * @param portId 端口id
+ * @param tabId 标签id
+ */
+function removeTab(portId, tabId) {
+    browser.tabs.remove(
+        parseInt(tabId)
+    ).then(() => {
+        sendMsg(portId, "msg_result_remove_tab", {
+            success: true,
+            tabId: tabId,
+        })
+    }).catch((e) => {
+        sendMsg(portId, "msg_result_remove_tab", {
+            success: false,
+            tabId: tabId,
+        })
+    })
 }
 
 
 //=============================消息接收=====================
+/**
+ * 端口id->port 字典表
+ * @type {Map<any, any>}
+ */
 let portMap = new Map();
 
-function connected(port) {
-    portMap[port.name] = port;
-    port.onMessage.addListener(onContentJsMsg);
+/**
+ * 发送数据
+ * @param portId 端口id
+ * @param msg 消息事件
+ * @param data 任意object数据
+ */
+function sendMsg(portId, msg, data) {
+    console.log("发送消息", portId, msg, data)
+    if (portMap.has(portId)) {
+        portMap.get(portId).postMessage({
+            msg: msg,
+            data: data
+        })
+    }
 }
 
-function onContentJsMsg(msg) {
-    switch (msg.msg) {
-        case "msg_all_tabs":
 
+function onMsgEvent(msg) {
+    console.log("收到消息:", msg)
+    switch (msg.msg) {
+        case "msg_request_all_tabs":
+            getCurrentWindowTabInfo(msg.portId)
             break
-        case "msg_remove_tab":
+        case "msg_request_remove_tab":
+            removeTab(msg.portId, msg.data.tabId)
             break
-        case "msg_open_tab":
+        case "msg_request_open_tab":
+            openTab(msg.portId, msg.data.tabId)
             break
     }
 }
 
+function onDisConnectEvent(port) {
+    portMap.delete(port.name)
+    console.warn(port)
+}
+
+
+function connected(port) {
+    console.log("链接:", port)
+    portMap.set(port.name, port)
+    port.onMessage.addListener(onMsgEvent);
+    port.onDisconnect.addListener(onDisConnectEvent);
+}
+
 browser.runtime.onConnect.addListener(connected);
+
