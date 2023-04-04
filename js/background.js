@@ -1,21 +1,5 @@
 // noinspection JSUnresolvedVariable,JSDeprecatedSymbols
 
-import {ChromePlatformHandle, FireFoxPlatformHandle} from "./platform_handle.js";
-
-//平台差异性处理工具
-let platformHandle = new FireFoxPlatformHandle();
-//浏览器命名空间
-
-
-// let browser = "browser";
-// console.log(browser.runtime.getPlatformInfo())
-// //判断平台
-// if (typeof browser === "undefined") {
-//     console.log("切换平台")
-//     browser = chrome;
-//     platformHandle = new ChromePlatformHandle();
-// }
-
 /**
  * 获取当前window的所有tab信息
  */
@@ -104,7 +88,7 @@ let portMap = new Map();
  * @param data 任意object数据
  */
 function sendMsg(portId, msg, data) {
-    console.log("发送消息", portId, msg, data)
+    // console.log("发送消息", portId, msg, data)
     if (portMap.has(portId)) {
         portMap.get(portId).postMessage({
             msg: msg,
@@ -115,10 +99,10 @@ function sendMsg(portId, msg, data) {
 
 
 function onMsgEvent(msg) {
-    console.log("收到消息:", msg)
+    // console.log("收到消息:", msg)
     switch (msg.msg) {
         case "msg_request_all_tabs":
-            getCurrentWindowTabInfo(msg.portId)
+            getCurrentWindowTabInfo(msg.portId).then()
             break
         case "msg_request_remove_tab":
             removeTab(msg.portId, msg.data.tabId)
@@ -136,7 +120,7 @@ function onDisConnectEvent(port) {
 
 
 function connected(port) {
-    console.log("链接:", port)
+    // console.log("链接:", port)
     portMap.set(port.name, port)
     port.onMessage.addListener(onMsgEvent);
     port.onDisconnect.addListener(onDisConnectEvent);
@@ -144,3 +128,48 @@ function connected(port) {
 
 browser.runtime.onConnect.addListener(connected);
 
+//====================心跳任务==================
+//保持后台脚本的活跃状态，从而保证程序的正常运行
+
+/**
+ * 创建延迟alarm
+ */
+function createDelayAlarm() {
+    let when = Date.now() + 3000;
+    browser.alarms.create("IAlmostFellAsleep", {when: when});
+}
+
+/**
+ * 随机端口通信
+ */
+function randomPortCommunicate(){
+    let ports = portMap.values();
+    //随机一个port进行心跳通信。
+    let index = Math.floor(Math.random() * portMap.size);
+    let port;
+    while (index >= 0) {
+        let next = ports.next();
+        port = next.value;
+        if (next.done) {
+            break;
+        } else {
+            index--;
+        }
+    }
+    if (port) {
+        port.postMessage({
+            msg: "IAlmostFellAsleep"
+        });
+    }
+}
+
+browser.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === "IAlmostFellAsleep") {
+        randomPortCommunicate()
+        //创建延迟alarm
+        createDelayAlarm();
+    }
+});
+
+//创建延迟alarm
+createDelayAlarm();

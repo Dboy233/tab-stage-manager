@@ -11,11 +11,7 @@ let class_label_card = `.${id_label_card}`;
  */
 let maxZIndex = 999999
 
-/**
- * popup是否已经被显示
- * @type {boolean}
- */
-let isPopupShow = false
+
 
 /**
  * 向html中插入popup
@@ -165,6 +161,12 @@ function setPopupAnimTag(isShow, dontAddNewAnim) {
 }
 
 /**
+ * popup是否已经被显示
+ * @type {boolean}
+ */
+let isPopupShow = false
+
+/**
  * 改变可见性
  */
 function changeVisible(needShow) {
@@ -300,16 +302,6 @@ function calculationCenterWidget() {
 }
 
 /**
- * 获取距离屏幕中心最近的item id
- */
-function getClosetItemId() {
-    if (closestBox) {
-        return closestBox.id;
-    }
-}
-
-
-/**
  * 重新计算抽屉的上下预留边距，这样为了帮正每一个box都机会可以被居中显示
  */
 function resizeDrawerMargin() {
@@ -331,17 +323,37 @@ function onRootViewClick(event) {
     event.stopPropagation();
 }
 
+/**
+ * 查找卡片通过标签id
+ * @param tabId 标签id
+ * @param callback 回调
+ */
+function queryCardByTabId(tabId,callback){
+    let cards = document.querySelectorAll(class_label_card);
+    for (let card of cards) {
+        if (parseInt(card.dataset.id) === parseInt(tabId)) {
+            callback(card)
+            return
+        }
+    }
+    callback(undefined)
+}
+
 
 /**
  * 滚动到对应的item位置
  */
-function scrollToItem(itemId) {
+function scrollToItem(tabId) {
     let container_root = document.getElementById(id_label_root);
     let windowHalfSize = window.innerHeight / 2;
-    let item = document.getElementById(itemId);
-    let offsetTop = item.getBoundingClientRect().top + (item.offsetHeight / 2);
-    console.log(container_root)
-    smoothScrollPx(container_root, Math.floor(offsetTop - windowHalfSize))
+
+    queryCardByTabId(tabId,(card)=>{
+        if (card) {
+            let offsetTop = card.getBoundingClientRect().top + (card.offsetHeight / 2);
+            smoothScrollPx(container_root, Math.floor(offsetTop - windowHalfSize))
+        }
+    })
+
 }
 
 /**
@@ -390,19 +402,19 @@ function smoothScrollPx(scrollView, scrollPx) {
  *   </div>
  * `
  *
- * @param boxId 为item设置id
+ * @param tabId 为item设置id
  * @param title 网站标题
  * @param imgSrc 网站截图base64
  */
-function addItem(boxId, title, imgSrc) {
+function addItem(tabId, title, imgSrc) {
     // 创建一个新的div元素
     let item = document.createElement("div");
-    item.id = boxId;
     item.className = id_label_card;
+    item.dataset.id = tabId
     item.onclick = (event) => {
         event.stopPropagation();
         let closetParent = event.target.closest(class_label_card);
-        scrollToItem(closetParent.id)
+        scrollToItem(closetParent.dataset.id)
     }
 
     //内容+操作=容器
@@ -421,7 +433,7 @@ function addItem(boxId, title, imgSrc) {
     delete_btn.addEventListener("click", (event) => {
         event.stopPropagation();
         let closetParent = event.target.closest(class_label_card);
-        sendRemoveTab(closetParent.id)
+        sendRemoveTab(closetParent.dataset.id)
     }, true)
 
     //操作打开按钮
@@ -432,7 +444,7 @@ function addItem(boxId, title, imgSrc) {
     open_btn.addEventListener("click", (event) => {
         event.stopPropagation();
         let closetParent = event.target.closest(class_label_card);
-        sendOpenTab(closetParent.id)
+        sendOpenTab(closetParent.dataset.id)
         showOrHide();
     }, true)
 
@@ -443,12 +455,12 @@ function addItem(boxId, title, imgSrc) {
     card_img.alt = "image"
     card_img.className = "page_info_card_img"
     card_img.onload = (iv) => {
-        console.log("onload", iv)
+        // console.log("onload", iv)
         iv.target.style.display = "block"
     }
     card_img.onerror = (iv) => {
         // let url = brower.runtime.getUrl("popup/no_preview.png");
-        console.log("onerror", iv)
+        // console.log("onerror", iv)
     }
     // card_img.src = imgSrc
 
@@ -464,21 +476,20 @@ function addItem(boxId, title, imgSrc) {
  * @param imgSrc 图片base64
  */
 function setItemImg(id, imgSrc) {
-    let elements = document.querySelectorAll("#" + id + "." + id_label_card);
-    console.log(elements)
+
 }
 
 /**
  * 移除
- * @param boxId 要删除的item id
+ * @param tabId 要删除的item id
  */
-function removeItem(boxId) {
+function removeItem(tabId) {
     // 找到要删除的 div 元素
-    let divToRemove = document.getElementById(boxId);
-    // 如果找到了该 div 元素，则从列表中移除它
-    if (divToRemove) {
-        document.getElementById(id_label_drawer).removeChild(divToRemove);
-    }
+    queryCardByTabId(tabId,(card)=>{
+        if (card) {
+            document.getElementById(id_label_drawer).removeChild(card);
+        }
+    })
     //重新计算中心位置
     calculationCenterWidget()
 }
@@ -609,12 +620,6 @@ function onMacKeyDown(event) {
     onKeyDown(event, event.metaKey, "e")
 }
 
-/**
- * 是否已经请求显示
- * @type {boolean}
- */
-let isRequestShow = false;
-
 function showOrHide() {
     if (isPopupShow) {
         changeVisible(false)
@@ -622,6 +627,13 @@ function showOrHide() {
         changeVisible(true);
     }
 }
+
+
+/**
+ * 是否已经请求显示
+ * @type {boolean}
+ */
+let isRequestShow = false;
 
 /**
  * 快捷键触发
@@ -637,13 +649,13 @@ function onKeyDown(event, firstKey, secondKey) {
         sendGetAllTabs();
     } else if (isPopupShow && event.key === secondKey) {
         //发送打开tab请求。
-        sendOpenTab(getClosetItemId())
+        sendOpenTab(closestBox.dataset.id)
     }
 }
 
 
 //不同平台使用不同的按键
-console.log(navigator.platform, "平台")
+// console.log(navigator.platform, "平台")
 if (navigator.platform.toUpperCase().includes("MAC")) {
     document.addEventListener('keydown', onMacKeyDown)
 } else {
@@ -661,7 +673,6 @@ const popupPortId = getRandomMsgId();
 const popupPort = browser.runtime.connect({"name": popupPortId});
 //接收消息
 popupPort.onMessage.addListener(function (msg) {
-    console.log("返回消息", msg)
     switch (msg.msg) {
         case "msg_result_all_tabs":
             //得到所有tab信息，接下来就是展示了
@@ -675,7 +686,6 @@ popupPort.onMessage.addListener(function (msg) {
                 }
             })
             if (activeTab != null) {
-                console.log("主动滚动到="+activeTab)
                 scrollToItem(activeTab.tabId)
             }
             break;
@@ -687,6 +697,9 @@ popupPort.onMessage.addListener(function (msg) {
             if (msg.data.success) {
                 removeItem(msg.data.tabId)
             }
+            break
+        case "IAlmostFellAsleep":
+            console.log("砰～砰～")
             break
         default:
             console.warn("no msg handle", msg.msg)
@@ -700,27 +713,24 @@ function sendGetAllTabs() {
     sendMsg("msg_request_all_tabs")
 }
 
-function sendRemoveTab(id) {
+function sendRemoveTab(tabId) {
     sendMsg("msg_request_remove_tab", {
-        tabId: id
+        tabId: tabId
     })
 }
 
-function sendOpenTab(id) {
+function sendOpenTab(tabId) {
     sendMsg("msg_request_open_tab", {
-        tabId: id,
+        tabId: tabId,
     })
 }
 
 
 function sendMsg(msg, data) {
-    console.log("发送消息", msg, data)
+    // console.log("发送消息", msg, data)
     popupPort.postMessage({
         portId: popupPortId,
         msg: msg,
         data: data,
     })
 }
-
-
-console.log("fucking is done")
