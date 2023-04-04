@@ -19,7 +19,7 @@
     }
   },
   "background": {
-    "page": "background-page.html"
+    "page": "background/background-page.html"
   },
   "content_scripts": [
     {

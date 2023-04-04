@@ -173,3 +173,10 @@ browser.alarms.onAlarm.addListener((alarm) => {
 
 //创建延迟alarm
 createDelayAlarm();
+
+//===================setting page===============
+function openOptionsPage() {
+    browser.runtime.openOptionsPage();
+}
+
+browser.browserAction.onClicked.addListener(openOptionsPage);
