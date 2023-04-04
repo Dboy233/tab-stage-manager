@@ -8,7 +8,8 @@
   },
   "permissions": [
     "tabs",
-    "alarms"
+    "alarms",
+    "activeTab"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -31,6 +32,10 @@
       ],
       "js": ["popup/popup.js"]
     }
-  ]
+  ],
+  "options_ui": {
+    "page": "option/option.html",
+    "browser_style": true
+  }
 }
 
