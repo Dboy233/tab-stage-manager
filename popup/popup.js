@@ -625,6 +625,10 @@ function showOrHide() {
  */
 function onKeyDown(event, platformKey) {
     if (platformKey && event.key === hotKey) {
+        if (isPopupShow) {
+            showOrHide()
+            return
+        }
         //发送获取所有tab信息请求。
         sendGetAllTabs();
     } else if (isPopupShow && event.key === hotKey) {
