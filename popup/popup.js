@@ -12,7 +12,6 @@ let class_label_card = `.${id_label_card}`;
 let maxZIndex = 999999
 
 
-
 /**
  * 向html中插入popup
  */
@@ -94,12 +93,12 @@ function onPopupCloseAnimEnd() {
 /**
  * 强制关闭popup
  */
-function forceHidePopup(hasAnim) {
-    if (hasAnim) {
-        changeVisible(false)
-        return
+function forceHidePopup() {
+    if (!isPopupShow) {
+        // console.log("不需要强制hide")
+        return;
     }
-    isPopupShow = false
+    isPopupShow = false;
     //移除所有动画
     setPopupAnimTag(false, true);
     setPopupAnimTag(true, true)
@@ -170,6 +169,10 @@ let isPopupShow = false
  * 改变可见性
  */
 function changeVisible(needShow) {
+    if (isPopupShow === needShow) {
+        // console.log("不须要改变可见性", needShow)
+        return
+    }
     isPopupShow = needShow;
     let container_root = document.getElementById(id_label_root);
     if (container_root == null) {
@@ -328,7 +331,7 @@ function onRootViewClick(event) {
  * @param tabId 标签id
  * @param callback 回调
  */
-function queryCardByTabId(tabId,callback){
+function queryCardByTabId(tabId, callback) {
     let cards = document.querySelectorAll(class_label_card);
     for (let card of cards) {
         if (parseInt(card.dataset.id) === parseInt(tabId)) {
@@ -347,7 +350,7 @@ function scrollToItem(tabId) {
     let container_root = document.getElementById(id_label_root);
     let windowHalfSize = window.innerHeight / 2;
 
-    queryCardByTabId(tabId,(card)=>{
+    queryCardByTabId(tabId, (card) => {
         if (card) {
             let offsetTop = card.getBoundingClientRect().top + (card.offsetHeight / 2);
             smoothScrollPx(container_root, Math.floor(offsetTop - windowHalfSize))
@@ -445,7 +448,7 @@ function addItem(tabId, title, imgSrc) {
         event.stopPropagation();
         let closetParent = event.target.closest(class_label_card);
         sendOpenTab(closetParent.dataset.id)
-        showOrHide();
+        // showOrHide();
     }, true)
 
     desc_container.append(desc, delete_btn, open_btn)
@@ -485,7 +488,7 @@ function setItemImg(id, imgSrc) {
  */
 function removeItem(tabId) {
     // 找到要删除的 div 元素
-    queryCardByTabId(tabId,(card)=>{
+    queryCardByTabId(tabId, (card) => {
         if (card) {
             document.getElementById(id_label_drawer).removeChild(card);
         }
@@ -606,19 +609,6 @@ function getRandomMsgId() {
 
 //=====================快捷键====================
 
-/**
- * win平台快捷键触发
- */
-function onWinKeyDown(event) {
-    onKeyDown(event, event.altKey, "w")
-}
-
-/**
- * mac平台快捷键触发
- */
-function onMacKeyDown(event) {
-    onKeyDown(event, event.metaKey, "e")
-}
 
 function showOrHide() {
     if (isPopupShow) {
@@ -628,39 +618,82 @@ function showOrHide() {
     }
 }
 
-
-/**
- * 是否已经请求显示
- * @type {boolean}
- */
-let isRequestShow = false;
-
 /**
  * 快捷键触发
  * @param event 事件
- * @param firstKey 按下第一个key
- * @param secondKey 按下第二个key
+ * @param platformKey 不同平台对应的不同触发按键
  */
-function onKeyDown(event, firstKey, secondKey) {
-    if (isRequestShow) return;
-    if (firstKey && event.key === secondKey) {
-        isRequestShow = true;
+function onKeyDown(event, platformKey) {
+    if (platformKey && event.key === hotKey) {
         //发送获取所有tab信息请求。
         sendGetAllTabs();
-    } else if (isPopupShow && event.key === secondKey) {
+    } else if (isPopupShow && event.key === hotKey) {
         //发送打开tab请求。
         sendOpenTab(closestBox.dataset.id)
     }
 }
 
+/**
+ * 快捷键按键,默认未定义,由不同平台设置
+ * @type {undefined}
+ */
+let hotKey = undefined;
 
-//不同平台使用不同的按键
-// console.log(navigator.platform, "平台")
-if (navigator.platform.toUpperCase().includes("MAC")) {
-    document.addEventListener('keydown', onMacKeyDown)
-} else {
-    document.addEventListener('keydown', onWinKeyDown);
+function onWinKeyDown(event) {
+    if (hotKey === undefined) {
+        hotKey = "w";
+        console.log("Win 默认快捷键 Alt+w")
+    }
+    onKeyDown(event, event.altKey, hotKey)
 }
+
+function onMacKeyDown(event) {
+    //默认为e
+    if (hotKey === undefined) {
+        console.log("Mac 默认快捷键 command+e")
+        hotKey = "e";
+    }
+    onKeyDown(event, event.metaKey, hotKey)
+}
+
+/**
+ * 监听按键
+ */
+function listenerKey() {
+    //不同平台使用不同的按键
+    if (navigator.platform.toUpperCase().includes("MAC")) {
+        document.removeEventListener('keydown', onMacKeyDown)
+        document.addEventListener('keydown', onMacKeyDown)
+    } else {
+        document.removeEventListener('keydown', onWinKeyDown)
+        document.addEventListener('keydown', onWinKeyDown);
+    }
+}
+
+/**
+ * 获取快捷键
+ */
+function getHotKey() {
+    browser.storage.sync.get('hot_key').then((res) => {
+        if (res.hot_key) {
+            hotKey = res.hot_key;
+        } else {
+            console.log("未定义快捷键")
+        }
+        listenerKey();
+    }).catch((e) => {
+        console.log("获取hotkey失败")
+        listenerKey()
+    });
+}
+
+getHotKey()
+
+//存储设置发生改变监听
+browser.storage.onChanged.addListener((changes, area) => {
+    getHotKey()
+});
+
 
 //=====================消息接收================================
 /**
@@ -671,14 +704,24 @@ const popupPortId = getRandomMsgId();
 
 //注册消息通道
 const popupPort = browser.runtime.connect({"name": popupPortId});
+
+/**
+ * 是否已经请求所有tab信息.信息量过大可能会产生延迟。防止多次请求
+ * @type {boolean}
+ */
+let isRequestAllTabs = false;
+
 //接收消息
 popupPort.onMessage.addListener(function (msg) {
     switch (msg.msg) {
         case "msg_result_all_tabs":
             //得到所有tab信息，接下来就是展示了
-            isRequestShow = false;
+            isRequestAllTabs = false;
+            //正在活动的窗口
             let activeTab = null;
+            //显示popup
             showOrHide();
+            //添加tab
             msg.data.tabs.forEach((tab) => {
                 addItem(tab.tabId, tab.title)
                 if (tab.isActive) {
@@ -690,7 +733,11 @@ popupPort.onMessage.addListener(function (msg) {
             }
             break;
         case "msg_result_open_tab":
-            changeVisible(false)
+            if (msg.data.force) {
+                forceHidePopup();
+            } else {
+                changeVisible(false);
+            }
             break
         case "msg_result_remove_tab":
             //删除某个标签事件状态
@@ -699,7 +746,8 @@ popupPort.onMessage.addListener(function (msg) {
             }
             break
         case "IAlmostFellAsleep":
-            console.log("砰～砰～")
+            //后台检查通信
+            // console.log("砰～砰～")
             break
         default:
             console.warn("no msg handle", msg.msg)
@@ -710,6 +758,8 @@ popupPort.onMessage.addListener(function (msg) {
  * 发送获取所有tabs信息
  */
 function sendGetAllTabs() {
+    if (isRequestAllTabs) return;
+    isRequestAllTabs = true;
     sendMsg("msg_request_all_tabs")
 }
 

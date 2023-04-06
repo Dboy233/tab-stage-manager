@@ -1,5 +1,6 @@
 // noinspection JSUnresolvedVariable,JSDeprecatedSymbols
 
+
 /**
  * 获取当前window的所有tab信息
  */
@@ -39,17 +40,18 @@ function openTab(portId, tabId) {
     browser.tabs.update(
         parseInt(tabId),
         {active: true}
-    ).then(() => {
-        sendMsg(portId, "msg_result_open_tab", {
-            tabId: tabId,
-            success: true
-        })
-    }).catch((e) => {
-        sendMsg(portId, "msg_result_open_tab", {
-            tabId: tabId,
-            success: false
-        })
-    })
+    ).then()
+    //     .then(() => {
+    //     sendMsg(portId, "msg_result_open_tab", {
+    //         tabId: tabId,
+    //         success: true
+    //     })
+    // }).catch((e) => {
+    //     sendMsg(portId, "msg_result_open_tab", {
+    //         tabId: tabId,
+    //         success: false
+    //     })
+    // })
 }
 
 /**
@@ -80,6 +82,20 @@ function removeTab(portId, tabId) {
  * @type {Map<any, any>}
  */
 let portMap = new Map();
+
+//只要有tab打开，就发送这个消息
+function handleActivated(activeInfo) {
+    for (let [key, value] of portMap) {
+        value.postMessage({
+            msg: "msg_result_open_tab",
+            data:{
+                force:true
+            }
+        })
+    }
+}
+
+browser.tabs.onActivated.addListener(handleActivated);
 
 /**
  * 发送数据
@@ -113,9 +129,13 @@ function onMsgEvent(msg) {
     }
 }
 
+/**
+ * 与pot连接中断的时候移除保存的pot
+ * @param port
+ */
 function onDisConnectEvent(port) {
     portMap.delete(port.name)
-    console.warn(port)
+    // console.warn(port)
 }
 
 
@@ -142,7 +162,7 @@ function createDelayAlarm() {
 /**
  * 随机端口通信
  */
-function randomPortCommunicate(){
+function randomPortCommunicate() {
     let ports = portMap.values();
     //随机一个port进行心跳通信。
     let index = Math.floor(Math.random() * portMap.size);
