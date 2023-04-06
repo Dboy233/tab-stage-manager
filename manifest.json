@@ -2,9 +2,10 @@
   "manifest_version": 3,
   "name": "Tab Stage Manager",
   "description": "Tab Stage Manager,Manage your Tab, when the TAB is crowded, you cannot distinguish the information of TAB. Through the shortcut Mac: Command+E or Win: Alt+W pop -up sliding tab list, you can see the web page you opened  . Press E/W again to navigate to the selected tab.",
+  "homepage_url": "https://github.com/Dboy233/tab-stage-manager",
   "version": "0.0.1",
   "icons": {
-    "64": "icons/icon.png"
+    "69": "icons/icon.png"
   },
   "permissions": [
     "tabs",
